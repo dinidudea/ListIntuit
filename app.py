@@ -5,6 +5,7 @@ import json
 import io
 import nltk
 import logging
+import google.generativeai as genai
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -20,6 +21,9 @@ app = Flask(__name__)
 
 # Load Google Cloud credentials
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials/google_credentials.json"
+
+genai.configure(credentials=google_credentials)
+model = genai.GenerativeModel('gemini-pro')
 
 # Settings file path
 SETTINGS_FILE = 'settings.json'
@@ -38,6 +42,15 @@ def load_settings():
 def save_settings(settings):
     with open(SETTINGS_FILE, 'w') as f:
         json.dump(settings, f)
+
+def generate_ssml(text):
+    prompt = f"""
+    Convert the following text into SSML markup with appropriate prosody, emphasis, and breaks based on the text's sentiment and meaning:
+    {text}
+    Return only the SSML markup without any explanation.
+    """
+    response = model.generate_content(prompt)
+    return response.text
 
 def split_text(text, max_bytes=4800):
     try:
@@ -94,7 +107,8 @@ def synthesize_speech():
         for i, chunk in enumerate(chunks, 1):
             logger.debug(f"Processing chunk {i} of {len(chunks)}")
 
-            synthesis_input = texttospeech.SynthesisInput(text=chunk)
+            ssml = generate_ssml(chunk)
+            synthesis_input = texttospeech.SynthesisInput(ssml=ssml)
             voice = texttospeech.VoiceSelectionParams(
                 language_code=settings['language'],
                 name=settings['voice']
