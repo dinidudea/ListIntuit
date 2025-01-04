@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file
 from google.cloud import texttospeech
+from google.oauth2 import service_account
 import os
 import json
 import io
@@ -19,10 +20,15 @@ from nltk.tokenize import sent_tokenize
 
 app = Flask(__name__)
 
-# Load Google Cloud credentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials/google_credentials.json"
+# Configure credentials for both services
+credentials_path = "credentials/google_credentials.json"
+credentials = service_account.Credentials.from_service_account_file(credentials_path)
 
-genai.configure(credentials=google_credentials)
+# Set environment variable for Text-to-Speech
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+
+# Configure Gemini AI with the same credentials
+genai.configure(credentials=credentials)
 model = genai.GenerativeModel('gemini-pro')
 
 # Settings file path
